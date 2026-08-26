@@ -233,14 +233,12 @@ baseCommand: [sh, -c]
 arguments:
   - "echo $(inputs.n_argument) > file.txt"
 inputs:
-  n_argument: int
+  n_argument: string
 outputs:
   n_argument:
-    type: int
+    type: string
     outputBinding:
       glob: file.txt
-      loadContents: true
-      outputEval: $(parseInt(self[0].contents))
 """
     )
 
@@ -249,10 +247,10 @@ outputs:
         """cwlVersion: v1.2
 class: Workflow
 inputs:
-  n_main_argument_in: int
+  n_main_argument_in: string
 outputs:
   n_main_argument_out:
-    type: int
+    type: string
     outputSource: step1/n_argument
 steps:
   step1:
@@ -269,7 +267,10 @@ steps:
 
     packed = json.loads(print_pack(loadingContext, uri))
     tool = next(g for g in packed["$graph"] if g["id"] == "#tool.cwl")
-    output = tool["outputs"][0]
+    outputs = tool["outputs"]
+    assert isinstance(outputs, list)
+    assert len(outputs) == 1
+    output = outputs[0]
 
     assert "$import" not in output
     assert output["id"] == "#tool.cwl/n_argument"
