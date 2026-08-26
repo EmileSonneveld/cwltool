@@ -222,3 +222,54 @@ def test_packed_workflow_execution(
 
     os.close(wf_packed_handle)
     os.remove(wf_packed_path)
+
+
+def test_pack_same_input_output_name(tmp_path: Path) -> None:
+    tool_path = tmp_path / "tool.cwl"
+    tool_path.write_text(
+        """cwlVersion: v1.2
+class: CommandLineTool
+baseCommand: [sh, -c]
+arguments:
+  - "echo $(inputs.n_argument) > file.txt"
+inputs:
+  n_argument: int
+outputs:
+  n_argument:
+    type: int
+    outputBinding:
+      glob: file.txt
+      loadContents: true
+      outputEval: $(parseInt(self[0].contents))
+"""
+    )
+
+    workflow_path = tmp_path / "main.cwl"
+    workflow_path.write_text(
+        """cwlVersion: v1.2
+class: Workflow
+inputs:
+  n_main_argument_in: int
+outputs:
+  n_main_argument_out:
+    type: int
+    outputSource: step1/n_argument
+steps:
+  step1:
+    run: tool.cwl
+    in:
+      n_argument: n_main_argument_in
+    out: [n_argument]
+"""
+    )
+
+    loadingContext, workflowobj, uri = fetch_document(str(workflow_path))
+    loadingContext.do_update = False
+    loadingContext, uri = resolve_and_validate_document(loadingContext, workflowobj, uri)
+
+    packed = json.loads(print_pack(loadingContext, uri))
+    tool = next(g for g in packed["$graph"] if g["id"] == "#tool.cwl")
+    output = tool["outputs"][0]
+
+    assert "$import" not in output
+    assert output["id"] == "#tool.cwl/n_argument"

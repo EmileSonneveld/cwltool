@@ -80,30 +80,36 @@ def replace_refs(d: Any, rewrite: dict[str, str], stem: str, newstem: str) -> No
 
 def import_embed(
     d: MutableSequence[CWLObjectType] | CWLObjectType | CWLOutputType | None,
-    seen: set[str],
+    seen: set[tuple[str, str]],
+    section: str = "root",
 ) -> None:
     if isinstance(d, MutableSequence):
         for v in d:
             import_embed(
-                cast(MutableSequence[CWLObjectType] | CWLObjectType | CWLOutputType, v), seen
+                cast(MutableSequence[CWLObjectType] | CWLObjectType | CWLOutputType, v),
+                seen,
+                section,
             )
     elif isinstance(d, MutableMapping):
         for n in ("id", "name"):
             if n in d:
                 if isinstance(d[n], str):
                     ident = cast(str, d[n])
-                    if ident in seen:
+                    ident_key = (ident, section)
+                    if ident_key in seen:
                         this = ident
                         d.clear()
                         d["$import"] = this
                     else:
                         this = ident
-                        seen.add(this)
+                        seen.add(ident_key)
                         break
 
         for k in sorted(d.keys()):
             import_embed(
-                cast(MutableSequence[CWLObjectType] | CWLObjectType | CWLOutputType, d[k]), seen
+                cast(MutableSequence[CWLObjectType] | CWLObjectType | CWLOutputType, d[k]),
+                seen,
+                k,
             )
 
 
@@ -275,7 +281,7 @@ def pack(
         v = rewrite_inputs[r]
         replace_refs(packed, rewrite_inputs, r + "/" if "#" in r else r + "#", v + "/")
 
-    import_embed(packed, set())
+    import_embed(packed, set(), "root")
 
     packed["$graph"][0]["outputs"] = save_outputs
     for r in list(rewrite_outputs.keys()):
