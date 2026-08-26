@@ -236,7 +236,7 @@ inputs:
   n_argument: string
 outputs:
   n_argument:
-    type: string
+    type: File
     outputBinding:
       glob: file.txt
 """
@@ -250,7 +250,7 @@ inputs:
   n_main_argument_in: string
 outputs:
   n_main_argument_out:
-    type: string
+    type: File
     outputSource: step1/n_argument
 steps:
   step1:

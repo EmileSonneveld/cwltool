@@ -16,6 +16,7 @@ from .process import shortname, uniquename
 from .update import ORDERED_VERSIONS, ORIGINAL_CWLVERSION, update
 
 LoadRefType = Callable[[Optional[str], str], ResolveType]
+IMPORT_EMBED_SECTIONS = {"inputs", "outputs", "in", "out"}
 
 
 def find_run(
@@ -83,8 +84,6 @@ def import_embed(
     seen: set[tuple[str, str]],
     section: str = "root",
 ) -> None:
-    semantic_sections = {"inputs", "outputs"}
-
     if isinstance(d, MutableSequence):
         for v in d:
             import_embed(
@@ -108,7 +107,7 @@ def import_embed(
                         break
 
         for k in sorted(d.keys()):
-            next_section = k if k in semantic_sections else section
+            next_section = k if k in IMPORT_EMBED_SECTIONS else section
             import_embed(
                 cast(MutableSequence[CWLObjectType] | CWLObjectType | CWLOutputType, d[k]),
                 seen,
